@@ -50,3 +50,8 @@ func (i glideImporter) DeriveRootManifestAndLock(dir string, pr gps.ProjectRoot)
 func (i glideImporter) DeriveManifestAndLock(dir string, pr gps.ProjectRoot) (gps.Manifest, gps.Lock, error) {
 	return i.DeriveRootManifestAndLock(dir, pr)
 }
+
+func (a glideImporter) PostSolveShenanigans(*dep.Manifest, *dep.Lock) {
+	// do nothing
+	// TODO: importers don't need to be full root analyzers
+}

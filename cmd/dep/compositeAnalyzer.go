@@ -20,3 +20,7 @@ type compositeAnalyzer struct {
 func (a compositeAnalyzer) DeriveRootManifestAndLock(path string, n gps.ProjectRoot) (*dep.Manifest, *dep.Lock, error) {
 	return nil, nil, errors.New("Not implemented")
 }
+
+func (a compositeAnalyzer) PostSolveShenanigans(*dep.Manifest, *dep.Lock) {
+	panic("not implemented")
+}

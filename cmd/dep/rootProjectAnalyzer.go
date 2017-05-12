@@ -16,4 +16,6 @@ type rootProjectAnalyzer interface {
 	// root import path importRoot, to determine the project's constraints, as
 	// indicated by a Manifest and Lock.
 	DeriveRootManifestAndLock(path string, n gps.ProjectRoot) (*dep.Manifest, *dep.Lock, error)
+
+	PostSolveShenanigans(*dep.Manifest, *dep.Lock)
 }

@@ -117,56 +117,25 @@ func (cmd *initCommand) Run(ctx *dep.Ctx, loggers *Loggers, args []string) error
 	sm.UseDefaultSignalHandling()
 	defer sm.Release()
 
-	pd, err := getProjectData(ctx, loggers, pkgT, cpr, sm)
-	if err != nil {
-		return err
-	}
-	m := &dep.Manifest{
-		Dependencies: pd.constraints,
-	}
-
-	// Make an initial lock from what knowledge we've collected about the
-	// versions on disk
-	l := &dep.Lock{
-		P: make([]gps.LockedProject, 0, len(pd.ondisk)),
-	}
-
-	for pr, v := range pd.ondisk {
-		// That we have to chop off these path prefixes is a symptom of
-		// a problem in gps itself
-		pkgs := make([]string, 0, len(pd.dependencies[pr]))
-		prslash := string(pr) + "/"
-		for _, pkg := range pd.dependencies[pr] {
-			if pkg == string(pr) {
-				pkgs = append(pkgs, ".")
-			} else {
-				pkgs = append(pkgs, trimPathPrefix(pkg, prslash))
-			}
-		}
-
-		l.P = append(l.P, gps.NewLockedProject(
-			gps.ProjectIdentifier{ProjectRoot: pr}, v, pkgs),
-		)
-	}
-
-	//var rootAnalyzer rootProjectAnalyzer
+	var rootAnalyzer rootProjectAnalyzer
 	var analyzer gps.ProjectAnalyzer
 	if cmd.skipTools {
-		//rootAnalyzer = newGopathAnalyzer(ctx, pkgtree, cpr, sm)
+		rootAnalyzer = newGopathAnalyzer(loggers, ctx, pkgT, cpr, sm)
 		analyzer = dep.Analyzer{}
 	} else {
+		rootAnalyzer = newGopathAnalyzer(loggers, ctx, pkgT, cpr, sm)
 		/*rootAnalyzer := compositeAnalyzer{
-			Analyzers: []rootProjectAnalyzer{
-				newGopathAnalyzer(ctx, pkgtree, cpr, sm),
-				importAnalyzer{},
-			}}
-
-		// Analyze the root project to create an root manifest and lock
-		m, l, err := rootAnalyzer.DeriveRootManifestAndLock(root, gps.ProjectRoot(cpr))
-		if err != nil {
-			return errors.Wrap(err, "Error initializing a manifest and lock")
-		}*/
+		Analyzers: []rootProjectAnalyzer{
+			newGopathAnalyzer(ctx, pkgtree, cpr, sm),
+			importAnalyzer{},
+		}}*/
 		analyzer = importAnalyzer{}
+	}
+
+	// Generate a manifest and lock for the root project
+	m, l, err := rootAnalyzer.DeriveRootManifestAndLock(root, gps.ProjectRoot(cpr))
+	if err != nil {
+		return errors.Wrap(err, "Error deriving a root manifest and lock")
 	}
 
 	if loggers.Verbose {
@@ -196,15 +165,7 @@ func (cmd *initCommand) Run(ctx *dep.Ctx, loggers *Loggers, args []string) error
 	}
 	l = dep.LockFromInterface(soln)
 
-	// Pick notondisk project constraints from solution and add to manifest
-	for k, _ := range pd.notondisk {
-		for _, x := range l.Projects() {
-			if k == x.Ident().ProjectRoot {
-				m.Dependencies[k] = getProjectPropertiesFromVersion(x.Version())
-				break
-			}
-		}
-	}
+	rootAnalyzer.PostSolveShenanigans(m, l)
 
 	// Run gps.Prepare with appropriate constraint solutions from solve run
 	// to generate the final lock memo.
