@@ -19,18 +19,18 @@ type glideImporter struct {
 	loggers *Loggers
 }
 
+func newGlideImporter(loggers *Loggers) glideImporter {
+	return glideImporter{loggers: loggers}
+}
+
 func (i glideImporter) Info() (name string, version int) {
 	return "glide", 1
 }
 
 func (i glideImporter) HasConfig(dir string) bool {
+	// Only require glide.yaml, the lock is optional
 	y := filepath.Join(dir, glideYamlName)
 	if _, err := os.Stat(y); err != nil {
-		return false
-	}
-
-	l := filepath.Join(dir, glideLockName)
-	if _, err := os.Stat(l); err != nil {
 		return false
 	}
 

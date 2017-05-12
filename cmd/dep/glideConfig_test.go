@@ -28,7 +28,7 @@ func TestGlideConvertProject(t *testing.T) {
 				},
 			},
 		},
-		lock: glideLock{
+		lock: &glideLock{
 			Imports: []glidePackage{
 				{
 					Name:      "github.com/sdboyer/deptest",
@@ -93,7 +93,7 @@ func TestGlideConvertTestProject(t *testing.T) {
 				},
 			},
 		},
-		lock: glideLock{
+		lock: &glideLock{
 			TestImports: []glidePackage{
 				{
 					Name:      "github.com/sdboyer/deptest",
