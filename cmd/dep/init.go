@@ -123,12 +123,11 @@ func (cmd *initCommand) Run(ctx *dep.Ctx, loggers *Loggers, args []string) error
 		rootAnalyzer = newGopathAnalyzer(loggers, ctx, pkgT, cpr, sm)
 		analyzer = dep.Analyzer{}
 	} else {
-		rootAnalyzer = newGopathAnalyzer(loggers, ctx, pkgT, cpr, sm)
-		/*rootAnalyzer := compositeAnalyzer{
-		Analyzers: []rootProjectAnalyzer{
-			newGopathAnalyzer(ctx, pkgtree, cpr, sm),
-			importAnalyzer{},
-		}}*/
+		rootAnalyzer = compositeAnalyzer{
+			Analyzers: []rootProjectAnalyzer{
+				newGopathAnalyzer(loggers, ctx, pkgT, cpr, sm),
+				importAnalyzer{},
+			}}
 		analyzer = importAnalyzer{}
 	}
 

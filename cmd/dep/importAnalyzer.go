@@ -24,6 +24,13 @@ type importAnalyzer struct {
 	loggers *Loggers
 }
 
+func (a importAnalyzer) Info() (string, int) {
+	// TODO: do not merge until this is set to something unique.
+	// I'm not changing it now because that will cause the memo to change in tests
+	// which I'll deal with and update later
+	return "dep", 1
+}
+
 func (a importAnalyzer) DeriveRootManifestAndLock(dir string, pr gps.ProjectRoot) (*dep.Manifest, *dep.Lock, error) {
 	for _, i := range importers {
 		if i.HasConfig(dir) {
@@ -58,9 +65,6 @@ func (a importAnalyzer) DeriveManifestAndLock(dir string, pr gps.ProjectRoot) (g
 	return nil, nil, nil
 }
 
-func (a importAnalyzer) Info() (string, int) {
-	// TODO: do not merge until this is set to something unique.
-	// I'm not changing it now because that will cause the memo to change in tests
-	// which I'll deal with and update later
-	return "dep", 1
+func (a importAnalyzer) PostSolveShenanigans(m *dep.Manifest, l *dep.Lock) {
+	// do nothing
 }

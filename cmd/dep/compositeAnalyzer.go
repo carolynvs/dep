@@ -5,10 +5,9 @@
 package main
 
 import (
-	"errors"
-
 	"github.com/golang/dep"
 	"github.com/golang/dep/internal/gps"
+	"github.com/pkg/errors"
 )
 
 // compositeAnalyzer overlays configuration from multiple analyzers
@@ -18,9 +17,56 @@ type compositeAnalyzer struct {
 }
 
 func (a compositeAnalyzer) DeriveRootManifestAndLock(path string, n gps.ProjectRoot) (*dep.Manifest, *dep.Lock, error) {
-	return nil, nil, errors.New("Not implemented")
+	var rootM *dep.Manifest
+	var rootL *dep.Lock
+
+	for _, a := range a.Analyzers {
+		m, l, err := a.DeriveRootManifestAndLock(path, n)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "%T.DeriveRootManifestAndLock", a)
+		}
+
+		if rootM == nil && rootL == nil {
+			rootM = m
+			rootL = l
+		} else {
+			// Overlay the changes from the analyzer on-top of the previous analyzer's work
+			if m != nil {
+				for pkg, prj := range m.Dependencies {
+					rootM.Dependencies[pkg] = prj
+				}
+				for pkg, prj := range m.Ovr {
+					rootM.Ovr[pkg] = prj
+				}
+				for _, pkg := range m.Required {
+					if !contains(rootM.Required, pkg) {
+						rootM.Required = append(rootM.Required, pkg)
+					}
+				}
+				for _, pkg := range m.Ignored {
+					if !contains(rootM.Ignored, pkg) {
+						rootM.Ignored = append(rootM.Ignored, pkg)
+					}
+				}
+			}
+
+			if l != nil {
+				for _, lp := range l.P {
+					for i, existingLP := range rootL.P {
+						if lp.Ident().ProjectRoot == existingLP.Ident().ProjectRoot {
+							rootL.P[i] = lp
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return rootM, rootL, nil
 }
 
-func (a compositeAnalyzer) PostSolveShenanigans(*dep.Manifest, *dep.Lock) {
-	panic("not implemented")
+func (a compositeAnalyzer) PostSolveShenanigans(m *dep.Manifest, l *dep.Lock) {
+	for _, a := range a.Analyzers {
+		a.PostSolveShenanigans(m, l)
+	}
 }
