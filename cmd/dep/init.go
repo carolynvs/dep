@@ -32,6 +32,10 @@ versions available from the upstream source per the following algorithm:
  - Default branch(es) (sorted lexicographically)
  - Non-semver tags (sorted lexicographically)
 
+If configuration files for other dependency management tools are found, they
+are used to pre-populate the manifest and lock. Specify -skip-tools to disable
+this behavior.
+
 A Gopkg.toml file will be written with inferred version constraints for all
 direct dependencies. Gopkg.lock will be written with precise versions, and
 vendor/ will be populated with the precise versions written to Gopkg.lock.
@@ -45,10 +49,12 @@ func (cmd *initCommand) Hidden() bool      { return false }
 
 func (cmd *initCommand) Register(fs *flag.FlagSet) {
 	fs.BoolVar(&cmd.noExamples, "no-examples", false, "don't include example in Gopkg.toml")
+	fs.BoolVar(&cmd.skipTools, "skip-tools", false, "skip importing configuration from other dependency managers")
 }
 
 type initCommand struct {
 	noExamples bool
+	skipTools  bool
 }
 
 func trimPathPrefix(p1, p2 string) string {
@@ -143,7 +149,26 @@ func (cmd *initCommand) Run(ctx *dep.Ctx, loggers *Loggers, args []string) error
 		)
 	}
 
-	// Run solver with project versions found on disk
+	//var rootAnalyzer rootProjectAnalyzer
+	var analyzer gps.ProjectAnalyzer
+	if cmd.skipTools {
+		//rootAnalyzer = newGopathAnalyzer(ctx, pkgtree, cpr, sm)
+		analyzer = dep.Analyzer{}
+	} else {
+		/*rootAnalyzer := compositeAnalyzer{
+			Analyzers: []rootProjectAnalyzer{
+				newGopathAnalyzer(ctx, pkgtree, cpr, sm),
+				importAnalyzer{},
+			}}
+
+		// Analyze the root project to create an root manifest and lock
+		m, l, err := rootAnalyzer.DeriveRootManifestAndLock(root, gps.ProjectRoot(cpr))
+		if err != nil {
+			return errors.Wrap(err, "Error initializing a manifest and lock")
+		}*/
+		analyzer = importAnalyzer{}
+	}
+
 	if loggers.Verbose {
 		loggers.Err.Println("dep: Solving...")
 	}
@@ -152,7 +177,7 @@ func (cmd *initCommand) Run(ctx *dep.Ctx, loggers *Loggers, args []string) error
 		RootPackageTree: pkgT,
 		Manifest:        m,
 		Lock:            l,
-		ProjectAnalyzer: dep.Analyzer{},
+		ProjectAnalyzer: analyzer,
 	}
 
 	if loggers.Verbose {
